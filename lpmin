@@ -1,0 +1,48 @@
+public static JSONObject httpPost(String url, String param) {
+    CloseableHttpClient httpClient = HttpClients.createDefault();
+    HttpPost method = new HttpPost(url);
+
+    // post请求返回结果
+    JSONObject jsonResult = new JSONObject();
+    try {
+        if (StringUtils.isNotBlank(param)) {
+            // 解决中文乱码问题
+            StringEntity entity = new StringEntity(param, "utf-8");
+            entity.setContentType("application/json");
+            method.setEntity(entity);
+        }
+        HttpResponse result = httpClient.execute(method);
+        url = URLDecoder.decode(url, "utf-8");
+        /** 请求发送成功，并得到响应 **/
+        int statusCode = result.getStatusLine().getStatusCode();
+        if (statusCode == NumberConstants.NUMBER_200) {
+            String str = EntityUtils.toString(result.getEntity());
+            JSONObject resObj = JSONObject.fromObject(str);
+            jsonResult.put("success", true);
+            jsonResult.put("message", "调用成功");
+            jsonResult.put("data", resObj);
+        } else if ( statusCode == NumberConstants.NUM_500) {
+            String str = EntityUtils.toString(result.getEntity());
+            JSONObject resObj = JSONObject.fromObject(str);
+            jsonResult.put("success", false);
+            jsonResult.put("message", "服务器内部错误");
+        } else if (statusCode == NumberConstants.NUM_404) {
+            jsonResult.put("success", false);
+            jsonResult.put("message", "接口没有找到");
+        } else {
+            jsonResult.put("success", false);
+            jsonResult.put("message", "调用出错");
+        }
+        return jsonResult;
+    } catch (IOException e) {
+        log.error("httpPostYs请求失败:" + url, e);
+    } finally {
+        method.releaseConnection();
+        try {
+            httpClient.close();
+        } catch (IOException e) {
+            log.error(String.format("httpPostYs,httpClient.close()失败:%s", url), e);
+        }
+    }
+    return jsonResult;
+}
